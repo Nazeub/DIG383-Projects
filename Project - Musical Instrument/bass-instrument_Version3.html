@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="codingSoundFavicon.ico" />
+  <title>Bass Instrument</title>
+
+  <!-- Import Tone.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.min.js"></script>
+
+  <!-- Import AudioKeys -->
+  <script src="https://cdn.jsdelivr.net/gh/kylestetz/AudioKeys@master/dist/audiokeys.min.js"></script>
+
+  <!-- Style -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      color: #444;
+      margin: 20px 0;
+    }
+
+    p {
+      color: #666;
+    }
+
+    .controls {
+      margin: 30px auto;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .slider-container {
+      text-align: center;
+    }
+
+    .slider-container input {
+      width: 150px;
+    }
+
+    .keyboard {
+      display: flex;
+      justify-content: center;
+      margin: 40px 0;
+    }
+
+    .play-controls > button {
+      padding: 10px 20px;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin: 0 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .play-controls > button:hover {
+      background-color: #666;
+    }
+  </style>
+
+</head>
+<body>
+
+  <h1>Bass Guitar Simulator</h1>
+  <p>Play bass-like tones with your keyboard keys! Adjust sliders to explore modulation and effects.</p>
+
+  <div class="controls">
+    <!-- Harmonicity Slider -->
+    <div class="slider-container">
+      <label for="harmonicity">Harmonicity</label><br />
+      <input id="harmonicity" type="range" min="1" max="10" step="0.1" value="2">
+      <p><span id="harmonicity-value">2.0</span></p>
+    </div>
+
+    <!-- Detune Slider -->
+    <div class="slider-container">
+      <label for="detune">Detune</label><br />
+      <input id="detune" type="range" min="-1200" max="1200" step="10" value="0">
+      <p><span id="detune-value">0</span></p>
+    </div>
+
+    <!-- LFO Rate Slider -->
+    <div class="slider-container">
+      <label for="lfo">LFO Rate</label><br />
+      <input id="lfo" type="range" min="0.1" max="10" step="0.1" value="1">
+      <p><span id="lfo-value">1.0</span> Hz</p>
+    </div>
+  </div>
+
+  <!-- Keyboard Area -->
+  <div class="keyboard">
+    <img
+      src="https://camo.githubusercontent.com/9a2b15e8cc0b9f85d9a21f46fe250a2b6e5b1d7a4abe410afdcc39f9f467c487/68747470733a2f2f7261772e6769746875622e636f6d2f6b796c65737465747a2f617564696f6b6579732f6d61737465722f696d616765732f617564696f6b6579732d6d617070696e672d726f7773322e6a7067"
+      alt="keyboard layout" style="width:80%">
+  </div>
+
+  <!-- Play Controls -->
+  <div class="play-controls">
+    <button id="play-btn">Start</button>
+  </div>
+
+  <script>
+    /**
+     * BASS INSTRUMENT LOGIC
+     */
+
+    // Gain (acts like volume controller)
+    const gain = new Tone.Gain(0.5).toDestination();
+
+    // FM Synth — mimics the sound of plucked strings
+    const fmSynth = new Tone.FMSynth({
+      harmonicity: 2,
+      modulationIndex: 5,
+      detune: 0,
+      envelope: {
+        attack: 0.01,
+        decay: 0.25,
+        sustain: 0.2,
+        release: 0.8,
+      },
+      modulation: {
+        type: "square",
+      },
+      modulationEnvelope: {
+        attack: 0.1,
+        decay: 0.2,
+        sustain: 1,
+        release: 0.5,
+      },
+    }).connect(gain);
+
+    // LFO for modulation
+    const lfo = new Tone.LFO("1Hz", -10, 10);
+    lfo.connect(fmSynth.detune); // Connects to the FM Synth's detune parameter
+    lfo.start();
+
+    // AudioKeys for keyboard interaction
+    const keyboard = new AudioKeys({
+      rows: 2,
+      rowOctave: 3, // Controls where the notes start (adjust as needed)
+      polyphony: 20, // Allows multiple keys to play simultaneously
+    });
+
+    // Custom key mapping for the ";" key
+    document.addEventListener("keydown", (event) => {
+      if (event.key === ";") {
+        const noteFrequency = 329.63; // E4 note frequency
+        console.log("Custom key detected: ; (E4)");
+        fmSynth.triggerAttackRelease(noteFrequency, "2n");
+      }
+    });
+
+    // Map keys for other notes
+    keyboard.down((key) => {
+      if (key.frequency) {
+        fmSynth.triggerAttackRelease(key.frequency, "2n");
+      }
+    });
+
+    // Sliders
+    const harmonicitySlider = document.getElementById("harmonicity");
+    const harmonicityValue = document.getElementById("harmonicity-value");
+
+    const detuneSlider = document.getElementById("detune");
+    const detuneValue = document.getElementById("detune-value");
+
+    const lfoSlider = document.getElementById("lfo");
+    const lfoValue = document.getElementById("lfo-value");
+
+    // Slider Listeners
+    harmonicitySlider.addEventListener("input", () => {
+      fmSynth.harmonicity.value = parseFloat(harmonicitySlider.value);
+      harmonicityValue.textContent = harmonicitySlider.value;
+    });
+
+    detuneSlider.addEventListener("input", () => {
+      fmSynth.detune.value = parseInt(detuneSlider.value);
+      detuneValue.textContent = detuneSlider.value;
+    });
+
+    lfoSlider.addEventListener("input", () => {
+      lfo.frequency.value = parseFloat(lfoSlider.value);
+      lfoValue.textContent = `${lfoSlider.value} Hz`;
+    });
+
+    // Play button for enabling audio context
+    const playBTN = document.getElementById("play-btn");
+    let isPlaying = false;
+
+    playBTN.addEventListener("click", () => {
+      if (!isPlaying) {
+        Tone.start();
+        playBTN.textContent = "Stop";
+        isPlaying = true;
+      } else {
+        Tone.Transport.pause();
+        playBTN.textContent = "Start";
+        isPlaying = false;
+      }
+    });
+  </script>
+</body>
+</html>
